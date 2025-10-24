@@ -1,5 +1,5 @@
 if (game:GetService("CoreGui")):FindFirstChild("STELLAR") and (game:GetService("CoreGui")):FindFirstChild("ScreenGui") then
-	(game:GetService("CoreGui")).STELLAR:Destroy();
+	(game:GetService("CoreGui")).VINI:Destroy();
 	(game:GetService("CoreGui")).ScreenGui:Destroy();
 end;
 -- Remover verificações iniciais que podem ser detectadas
