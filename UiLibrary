@@ -1,0 +1,431 @@
+
+local SuaUILibrary = {}
+SuaUILibrary.__index = SuaUILibrary
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local DefaultTheme = {
+    Background = Color3.fromRGB(15, 15, 25),
+    Secondary = Color3.fromRGB(25, 25, 35),
+    Accent = Color3.fromRGB(138, 43, 226),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextSecondary = Color3.fromRGB(180, 180, 180),
+    Border = Color3.fromRGB(45, 45, 55)
+}
+
+function SuaUILibrary:CreateWindow(config)
+    local self = setmetatable({}, SuaUILibrary)
+    
+    self.Settings = {
+        Name = config.Name or "SuaUILibrary",
+        Title = config.Title or "Sua UI Library",
+        ToggleKey = config.ToggleKey or Enum.KeyCode.RightControl,
+        Theme = config.Theme or DefaultTheme
+    }
+    
+    self.Theme = {}
+    for key, value in pairs(DefaultTheme) do
+        self.Theme[key] = config.Theme and config.Theme[key] or value
+    end
+    
+    self.Tabs = {}
+    self.CurrentTab = nil
+    
+    self:CreateInterface()
+    
+    return self
+end
+
+function SuaUILibrary:CreateInterface()
+    self.ScreenGui = Instance.new("ScreenGui")
+    self.ScreenGui.Name = self.Settings.Name
+    self.ScreenGui.Parent = game.CoreGui
+    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    self.MainFrame = Instance.new("Frame")
+    self.MainFrame.Name = "MainFrame"
+    self.MainFrame.Parent = self.ScreenGui
+    self.MainFrame.BackgroundColor3 = self.Theme.Background
+    self.MainFrame.BorderSizePixel = 0
+    self.MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
+    self.MainFrame.Size = UDim2.new(0, 600, 0, 400)
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = self.MainFrame
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = self.Theme.Border
+    stroke.Thickness = 1
+    stroke.Parent = self.MainFrame
+    
+    self:CreateTitleBar()
+    self:CreateNavigation()
+    self:CreateContentContainer()
+    self:MakeDraggable(self.MainFrame)
+    self:SetupToggleKey()
+end
+
+function SuaUILibrary:CreateTitleBar()
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = self.MainFrame
+    titleBar.BackgroundColor3 = self.Theme.Secondary
+    titleBar.BorderSizePixel = 0
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.Parent = titleBar
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Parent = titleBar
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Position = UDim2.new(0, 15, 0, 0)
+    titleLabel.Size = UDim2.new(0, 200, 1, 0)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Text = self.Settings.Title
+    titleLabel.TextColor3 = self.Theme.Text
+    titleLabel.TextSize = 16
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local closeButton = Instance.new("TextButton")
+    closeButton.Name = "CloseButton"
+    closeButton.Parent = titleBar
+    closeButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    closeButton.BorderSizePixel = 0
+    closeButton.Position = UDim2.new(1, -35, 0.5, -10)
+    closeButton.Size = UDim2.new(0, 20, 0, 20)
+    closeButton.Font = Enum.Font.Gotham
+    closeButton.Text = "X"
+    closeButton.TextColor3 = self.Theme.Text
+    closeButton.TextSize = 12
+    
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(1, 0)
+    closeCorner.Parent = closeButton
+    
+    closeButton.MouseButton1Click:Connect(function()
+        self.ScreenGui:Destroy()
+    end)
+end
+
+function SuaUILibrary:CreateNavigation()
+    self.NavFrame = Instance.new("Frame")
+    self.NavFrame.Name = "Navigation"
+    self.NavFrame.Parent = self.MainFrame
+    self.NavFrame.BackgroundColor3 = self.Theme.Secondary
+    self.NavFrame.BorderSizePixel = 0
+    self.NavFrame.Position = UDim2.new(0, 10, 0, 50)
+    self.NavFrame.Size = UDim2.new(0, 120, 1, -60)
+    
+    local navCorner = Instance.new("UICorner")
+    navCorner.CornerRadius = UDim.new(0, 6)
+    navCorner.Parent = self.NavFrame
+    
+    self.NavContainer = Instance.new("ScrollingFrame")
+    self.NavContainer.Name = "NavContainer"
+    self.NavContainer.Parent = self.NavFrame
+    self.NavContainer.BackgroundTransparency = 1
+    self.NavContainer.Size = UDim2.new(1, 0, 1, 0)
+    self.NavContainer.ScrollBarThickness = 3
+    self.NavContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    self.NavContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    local navList = Instance.new("UIListLayout")
+    navList.Parent = self.NavContainer
+    navList.Padding = UDim.new(0, 5)
+    
+    local navPadding = Instance.new("UIPadding")
+    navPadding.Parent = self.NavContainer
+    navPadding.PaddingTop = UDim.new(0, 10)
+    navPadding.PaddingLeft = UDim.new(0, 10)
+    navPadding.PaddingRight = UDim.new(0, 10)
+end
+
+function SuaUILibrary:CreateContentContainer()
+    self.ContentFrame = Instance.new("Frame")
+    self.ContentFrame.Name = "ContentFrame"
+    self.ContentFrame.Parent = self.MainFrame
+    self.ContentFrame.BackgroundColor3 = self.Theme.Background
+    self.ContentFrame.BorderSizePixel = 0
+    self.ContentFrame.Position = UDim2.new(0, 140, 0, 50)
+    self.ContentFrame.Size = UDim2.new(1, -150, 1, -60)
+    
+    local contentCorner = Instance.new("UICorner")
+    contentCorner.CornerRadius = UDim.new(0, 6)
+    contentCorner.Parent = self.ContentFrame
+    
+    self.ContentContainer = Instance.new("ScrollingFrame")
+    self.ContentContainer.Name = "ContentContainer"
+    self.ContentContainer.Parent = self.ContentFrame
+    self.ContentContainer.BackgroundTransparency = 1
+    self.ContentContainer.Size = UDim2.new(1, 0, 1, 0)
+    self.ContentContainer.ScrollBarThickness = 4
+    self.ContentContainer.ScrollBarImageColor3 = self.Theme.Accent
+    self.ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    self.ContentContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    
+    local contentList = Instance.new("UIListLayout")
+    contentList.Parent = self.ContentContainer
+    contentList.Padding = UDim.new(0, 10)
+    contentList.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    local contentPadding = Instance.new("UIPadding")
+    contentPadding.Parent = self.ContentContainer
+    contentPadding.PaddingTop = UDim.new(0, 15)
+    contentPadding.PaddingLeft = UDim.new(0, 15)
+    contentPadding.PaddingRight = UDim.new(0, 15)
+    contentPadding.PaddingBottom = UDim.new(0, 15)
+end
+
+function SuaUILibrary:CreateTab(name)
+    local tab = {}
+    tab.Name = name
+    
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = name .. "Tab"
+    tabButton.Parent = self.NavContainer
+    tabButton.BackgroundColor3 = self.Theme.Secondary
+    tabButton.BorderSizePixel = 0
+    tabButton.Size = UDim2.new(1, 0, 0, 35)
+    tabButton.Font = Enum.Font.Gotham
+    tabButton.Text = name
+    tabButton.TextColor3 = self.Theme.TextSecondary
+    tabButton.TextSize = 14
+    tabButton.AutoButtonColor = false
+    
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 6)
+    buttonCorner.Parent = tabButton
+    
+    local tabContent = Instance.new("Frame")
+    tabContent.Name = name .. "Content"
+    tabContent.Parent = self.ContentContainer
+    tabContent.BackgroundTransparency = 1
+    tabContent.Size = UDim2.new(1, 0, 0, 0)
+    tabContent.Visible = false
+    
+    local tabContentList = Instance.new("UIListLayout")
+    tabContentList.Parent = tabContent
+    tabContentList.Padding = UDim.new(0, 10)
+    tabContentList.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    tabContentList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabContent.Size = UDim2.new(1, 0, 0, tabContentList.AbsoluteContentSize.Y)
+    end)
+    
+    tabButton.MouseButton1Click:Connect(function()
+        self:SwitchTab(tab)
+    end)
+    
+    tab.Button = tabButton
+    tab.Content = tabContent
+    
+    table.insert(self.Tabs, tab)
+    
+    if #self.Tabs == 1 then
+        self:SwitchTab(tab)
+    end
+    
+    return tab
+end
+
+function SuaUILibrary:SwitchTab(tab)
+    for _, otherTab in pairs(self.Tabs) do
+        otherTab.Content.Visible = false
+        otherTab.Button.BackgroundColor3 = self.Theme.Secondary
+        otherTab.Button.TextColor3 = self.Theme.TextSecondary
+    end
+    
+    tab.Content.Visible = true
+    tab.Button.BackgroundColor3 = self.Theme.Accent
+    tab.Button.TextColor3 = self.Theme.Text
+    
+    self.CurrentTab = tab
+end
+
+function SuaUILibrary:CreateButton(config)
+    local button = Instance.new("TextButton")
+    button.Name = "Button_" .. config.text
+    button.Parent = config.parent.Content
+    button.BackgroundColor3 = self.Theme.Secondary
+    button.BorderSizePixel = 0
+    button.Size = UDim2.new(1, 0, 0, 35)
+    button.Font = Enum.Font.Gotham
+    button.Text = config.text
+    button.TextColor3 = self.Theme.Text
+    button.TextSize = 14
+    button.AutoButtonColor = false
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = self.Theme.Border
+    stroke.Thickness = 1
+    stroke.Parent = button
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = self.Theme.Accent
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = self.Theme.Secondary
+        }):Play()
+    end)
+    
+    button.MouseButton1Click:Connect(function()
+        if config.callback then
+            config.callback()
+        end
+    end)
+    
+    return button
+end
+
+function SuaUILibrary:CreateToggle(config)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "Toggle_" .. config.text
+    toggleFrame.Parent = config.parent.Content
+    toggleFrame.BackgroundTransparency = 1
+    toggleFrame.Size = UDim2.new(1, 0, 0, 30)
+    
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Name = "Label"
+    toggleLabel.Parent = toggleFrame
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.Position = UDim2.new(0, 0, 0, 0)
+    toggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    toggleLabel.Font = Enum.Font.Gotham
+    toggleLabel.Text = config.text
+    toggleLabel.TextColor3 = self.Theme.Text
+    toggleLabel.TextSize = 14
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Name = "ToggleButton"
+    toggleButton.Parent = toggleFrame
+    toggleButton.BackgroundColor3 = self.Theme.Secondary
+    toggleButton.BorderSizePixel = 0
+    toggleButton.Position = UDim2.new(1, -50, 0, 5)
+    toggleButton.Size = UDim2.new(0, 40, 0, 20)
+    toggleButton.Text = ""
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(1, 0)
+    toggleCorner.Parent = toggleButton
+    
+    local toggleState = config.default or false
+    
+    local function updateToggle()
+        if toggleState then
+            TweenService:Create(toggleButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = self.Theme.Accent
+            }):Play()
+        else
+            TweenService:Create(toggleButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = self.Theme.Secondary
+            }):Play()
+        end
+    end
+    
+    toggleButton.MouseButton1Click:Connect(function()
+        toggleState = not toggleState
+        updateToggle()
+        if config.callback then
+            config.callback(toggleState)
+        end
+    end)
+    
+    updateToggle()
+    
+    return {
+        Set = function(state)
+            toggleState = state
+            updateToggle()
+        end,
+        Get = function()
+            return toggleState
+        end
+    }
+end
+
+function SuaUILibrary:CreateSection(config)
+    local sectionFrame = Instance.new("Frame")
+    sectionFrame.Name = "Section_" .. config.text
+    sectionFrame.Parent = config.parent.Content
+    sectionFrame.BackgroundTransparency = 1
+    sectionFrame.Size = UDim2.new(1, 0, 0, 40)
+    
+    local sectionLabel = Instance.new("TextLabel")
+    sectionLabel.Name = "SectionLabel"
+    sectionLabel.Parent = sectionFrame
+    sectionLabel.BackgroundTransparency = 1
+    sectionLabel.Size = UDim2.new(1, 0, 0, 20)
+    sectionLabel.Font = Enum.Font.GothamBold
+    sectionLabel.Text = config.text
+    sectionLabel.TextColor3 = self.Theme.Text
+    sectionLabel.TextSize = 16
+    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local divider = Instance.new("Frame")
+    divider.Name = "Divider"
+    divider.Parent = sectionFrame
+    divider.BackgroundColor3 = self.Theme.Border
+    divider.BorderSizePixel = 0
+    divider.Position = UDim2.new(0, 0, 0, 25)
+    divider.Size = UDim2.new(1, 0, 0, 1)
+    
+    return sectionFrame
+end
+
+function SuaUILibrary:MakeDraggable(frame)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+function SuaUILibrary:SetupToggleKey()
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == self.Settings.ToggleKey then
+            self.ScreenGui.Enabled = not self.ScreenGui.Enabled
+        end
+    end)
+end
+
+return SuaUILibrary
