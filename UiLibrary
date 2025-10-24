@@ -1,4 +1,4 @@
-if (game:GetService("CoreGui")):FindFirstChild("STELLAR") and (game:GetService("CoreGui")):FindFirstChild("ScreenGui") then
+if (game:GetService("CoreGui")):FindFirstChild("VINI") and (game:GetService("CoreGui")):FindFirstChild("ScreenGui") then
 	(game:GetService("CoreGui")).VINI:Destroy();
 	(game:GetService("CoreGui")).ScreenGui:Destroy();
 end;
